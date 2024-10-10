@@ -65,6 +65,7 @@ export interface IAnalyzeResult {
   charCodeToPatternIdxToConfig: { [charCode: number]: IPatternConfig[] };
   emptyGroups: { [groupName: string]: IToken[] };
   hasCustom: boolean;
+  canBeOptimized: boolean;
   unoptimizedPatterns: IPatternConfig[];
 }
 
@@ -305,6 +306,7 @@ export function analyzeTokenTypes(
     );
   });
 
+  let canBeOptimized = true;
   let unoptimizedPatterns: IPatternConfig[] = [];
   let charCodeToPatternIdxToConfig: { [charCode: number]: IPatternConfig[] } =
     [];
@@ -365,6 +367,7 @@ export function analyzeTokenTypes(
                     "\tFor details See: https://chevrotain.io/docs/guide/resolving_lexer_errors.html#UNICODE_OPTIMIZE",
                 );
               }
+              canBeOptimized = false;
             } else {
               const optimizedCodes = getOptimizedStartCodesIndices(
                 currTokType.PATTERN,
@@ -372,7 +375,6 @@ export function analyzeTokenTypes(
               );
               /* istanbul ignore if */
               // start code will only be empty given an empty regExp or failure of regexp-to-ast library
-              // the first should be a different validation and the second cannot be tested.
               if (isEmpty(optimizedCodes)) {
                 // we cannot understand what codes may start possible matches
                 // instead, simply add the token to all known start characters
@@ -385,6 +387,7 @@ export function analyzeTokenTypes(
                   );
                 });
                 unoptimizedPatterns.push(patternIdxToConfig[idx]);
+                canBeOptimized = false;
               } else {
                 forEach(optimizedCodes, (code) => {
                   addToMapOfArrays(
@@ -405,6 +408,7 @@ export function analyzeTokenTypes(
                   "\tFor details See: https://chevrotain.io/docs/guide/resolving_lexer_errors.html#CUSTOM_OPTIMIZE",
               );
             }
+            canBeOptimized = false;
             forEach(Object.keys(result), (code) => {
               addToMapOfArrays(
                 result,
@@ -428,6 +432,7 @@ export function analyzeTokenTypes(
     patternIdxToConfig,
     charCodeToPatternIdxToConfig,
     hasCustom,
+    canBeOptimized,
     unoptimizedPatterns,
   };
 }

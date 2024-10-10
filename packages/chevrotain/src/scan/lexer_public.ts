@@ -272,6 +272,9 @@ export class Lexer {
               ) as any;
 
               this.hasCustom = currAnalyzeResult.hasCustom || this.hasCustom;
+
+              this.canModeBeOptimized[currModName] =
+                currAnalyzeResult.canBeOptimized;
             }
           });
         },
@@ -451,16 +454,10 @@ export class Lexer {
 
     const modeStack: string[] = [];
 
-    const emptyArray: IPatternConfig[] = [];
-    Object.freeze(emptyArray);
     let getPossiblePatterns!: (charCode: number) => IPatternConfig[];
 
     function getPossiblePatternsSlow() {
       return patternIdxToConfig;
-    }
-
-    function getPossiblePatternsMixed(charCode: number) {
-      return getPossiblePatternsOptimized(charCode).concat(unoptimizedPatterns);
     }
 
     function getPossiblePatternsOptimized(charCode: number): IPatternConfig[] {
@@ -468,7 +465,7 @@ export class Lexer {
       const possiblePatterns =
         currCharCodeToPatternIdxToConfig[optimizedCharIdx];
       if (possiblePatterns === undefined) {
-        return emptyArray;
+        return unoptimizedPatterns;
       } else {
         return possiblePatterns;
       }
@@ -503,13 +500,13 @@ export class Lexer {
         currCharCodeToPatternIdxToConfig =
           this.charCodeToPatternIdxToConfig[newMode];
         currModePatternsLength = patternIdxToConfig.length;
-        const modeCanBeOptimized =
-          this.canModeBeOptimized[newMode] && this.config.safeMode === false;
+        unoptimizedPatterns = this.unoptimizedPatterns[newMode];
 
-        if (currCharCodeToPatternIdxToConfig && modeCanBeOptimized) {
+        if (
+          currCharCodeToPatternIdxToConfig &&
+          this.config.safeMode === false
+        ) {
           getPossiblePatterns = getPossiblePatternsOptimized;
-        } else if (this.config.safeMode === false) {
-          getPossiblePatterns = getPossiblePatternsMixed;
         } else {
           getPossiblePatterns = getPossiblePatternsSlow;
         }
@@ -521,17 +518,15 @@ export class Lexer {
       currCharCodeToPatternIdxToConfig =
         this.charCodeToPatternIdxToConfig[newMode];
 
+      unoptimizedPatterns = this.unoptimizedPatterns[newMode];
+
       patternIdxToConfig = this.patternIdxToConfig[newMode];
       currModePatternsLength = patternIdxToConfig.length;
 
       currModePatternsLength = patternIdxToConfig.length;
-      const modeCanBeOptimized =
-        this.canModeBeOptimized[newMode] && this.config.safeMode === false;
 
-      if (currCharCodeToPatternIdxToConfig && modeCanBeOptimized) {
+      if (currCharCodeToPatternIdxToConfig && this.config.safeMode === false) {
         getPossiblePatterns = getPossiblePatternsOptimized;
-      } else if (this.config.safeMode === false) {
-        getPossiblePatterns = getPossiblePatternsMixed;
       } else {
         getPossiblePatterns = getPossiblePatternsSlow;
       }
